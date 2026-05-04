@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+    <title>NewsFilter Posts</title>
+    <style>
+        :root {
+          --bg: #0a0a0f;
+          --bg2: #0d0d16;
+          --bg3: #111118;
+          --border: #1e1e2e;
+          --text: #e0e0e0;
+          --muted: #555;
+          --accent: #00ff88;
+          --card-hover: #111120;
+          --podcast: #ff6b9d;
+        }
+        .light {
+          --bg: #f0f4f8;
+          --bg2: #ffffff;
+          --bg3: #e8edf2;
+          --border: #d0d8e4;
+          --text: #1a1a2e;
+          --muted: #888;
+          --accent: #00aa55;
+          --card-hover: #f8fafc;
+          --podcast: #e0005a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          min-height: 100vh;
+          background: var(--bg);
+          font-family: 'Courier New', monospace;
+          color: var(--text);
+          overflow-x: hidden;
+          transition: background 0.3s, color 0.3s;
+        }
+        .grid-bg {
+          position: fixed; inset: 0; z-index: 0;
+          background-image:
+            linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+          background-size: 40px 40px;
+          pointer-events: none;
+        }
+        .light .grid-bg {
+          background-image:
+            linear-gradient(rgba(0,150,80,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,150,80,0.05) 1px, transparent 1px);
+        }
+        .glow {
+          position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+          width: 600px; height: 400px;
+          background: radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 70%);
+          z-index: 0; pointer-events: none;
+        }
+        .container {
+          position: relative; z-index: 1;
+          max-width: 720px; margin: 0 auto;
+          padding: 24px 16px 120px;
+        }
+        .header { margin-bottom: 28px; }
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .header-left { flex: 1; }
+        .brand { font-size: 11px; color: var(--accent); letter-spacing: 4px; text-transform: uppercase; }
+        .title { font-size: 26px; font-weight: bold; color: var(--text); letter-spacing: -0.5px; margin-top: 4px; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+        .count-box { text-align: right; }
+        .count-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+        .count-num { font-size: 22px; font-weight: bold; color: var(--accent); }
+        .count-sub { font-size: 10px; color: var(--muted); }
+        .theme-toggle {
+          background: var(--bg3); border: 1px solid var(--border);
+          border-radius: 20px; padding: 6px 12px;
+          cursor: pointer; font-size: 16px;
+          transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .theme-toggle:hover { border-color: var(--accent); }
+        .theme-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+        .nav { display: flex; gap: 3px; background: var(--bg3); border-radius: 8px; padding: 4px; }
+        .nav-btn {
+          flex: 1; padding: 8px 2px; background: transparent;
+          border: 1px solid transparent; border-radius: 6px;
+          color: var(--muted); cursor: pointer; font-size: 10px;
+          letter-spacing: 0.5px; font-family: 'Courier New', monospace;
+          transition: all 0.2s;
+        }
+        .nav-btn.active { background: var(--bg2); border-color: rgba(0,255,136,0.27); color: var(--accent); }
+        .view { display: none; animation: fadeIn 0.25s ease; }
+        .section-label { color: var(--muted); font-size: 11px; letter-spacing: 2px; margin-bottom: 18px; }
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .cat-btn {
+          padding: 16px; text-align: left; background: var(--bg3);
+          border: 1px solid var(--border); border-radius: 10px;
+          cursor: pointer; transition: all 0.2s; position: relative;
+          font-family: 'Courier New', monospace;
+        }
+        .cat-icon { font-size: 22px; margin-bottom: 6px; }
+        .cat-name { font-size: 13px; font-weight: bold; color: var(--muted); }
+        .cat-dot { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; display: none; }
+        .cat-btn.on .cat-dot { display: block; }
+        .apply-btn {
+          margin-top: 24px; width: 100%; padding: 14px;
+          background: rgba(0,255,136,0.13); border: 1px solid rgba(0,255,136,0.4);
+          border-radius: 10px; color: var(--accent); cursor: pointer;
+          font-size: 13px; letter-spacing: 2px; font-family: 'Courier New', monospace;
+        }
+        .feed { display: flex; flex-direction: column; gap: 10px; }
+        .news-card {
+          padding: 16px; background: var(--bg2);
+          border: 1px solid var(--border); border-left-width: 3px;
+          border-radius: 10px; cursor: pointer; transition: background 0.2s;
+          animation: fadeIn 0.3s ease both;
+        }
+        .news-card:hover { background: var(--card-hover); }
+        .card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+        .cat-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-family: 'Courier New', monospace; }
+        .lang-badge { font-size: 9px; padding: 1px 6px; border-radius: 10px; font-family: 'Courier New', monospace; }
+        .card-time { font-size: 10px; color: var(--muted); margin-left: auto; }
+        .card-title { font-size: 14px; font-weight: bold; color: var(--text); line-height: 1.4; margin-bottom: 4px; }
+        .card-summary { font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .card-cta { margin-top: 10px; font-size: 10px; opacity: 0.7; }
+        .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-icon { font-size: 40px; margin-bottom: 12px; }
+        .empty-link {
+          margin-top: 12px; padding: 10px 20px; background: transparent;
+          border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+          cursor: pointer; font-size: 12px; font-family: 'Courier New', monospace;
+        }
+        .loading-feed { display: flex; flex-direction: column; gap: 10px; }
+        .skeleton { padding: 16px; background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; }
+        .skel-line { height: 10px; background: var(--bg3); border-radius: 4px; margin-bottom: 8px; animation: shimmer 1.5s infinite; }
+        /* PODCASTS */
+        .podcast-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .podcast-title { font-size: 11px; color: var(--muted); letter-spacing: 2px; }
+        .podcast-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+        .podcast-filter { padding: 4px 12px; border-radius: 20px; font-size: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--muted); cursor: pointer; font-family: 'Courier New', monospace; transition: all 0.2s; }
+        .podcast-filter.active { background: rgba(255,107,157,0.15); border-color: var(--podcast); color: var(--podcast); }
+        .podcast-card { display: flex; gap: 12px; padding: 14px; background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--podcast); border-radius: 10px; margin-bottom: 10px; animation: fadeIn 0.3s ease both; }
+        .podcast-art { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--bg3); }
+        .podcast-info { flex: 1; min-width: 0; }
+        .podcast-name { font-size: 13px; font-weight: bold; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+        .podcast-author { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+        .podcast-genre { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(255,107,157,0.1); color: var(--podcast); border: 1px solid rgba(255,107,157,0.2); display: inline-block; margin-bottom: 8px; }
+        .podcast-actions { display: flex; gap: 8px; align-items: center; }
+        .podcast-btn { padding: 6px 12px; border-radius: 6px; font-size: 10px; font-family: 'Courier New', monospace; cursor: pointer; border: 1px solid var(--podcast); color: var(--podcast); background: rgba(255,107,157,0.1); transition: all 0.2s; }
+        .podcast-btn.primary { background: var(--podcast); color: #fff; border-color: var(--podcast); }
+        /* MINI PLAYER */
+        .mini-player { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: var(--bg2); border-top: 1px solid var(--border); padding: 12px 16px 32px 16px; display: none; align-items: center; gap: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); }
+        .mini-player.show { display: flex; }
+        .mini-player-art { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--bg3); }
+        .mini-player-info { flex: 1; min-width: 0; }
+        .mini-player-name { font-size: 12px; font-weight: bold; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mini-player-author { font-size: 10px; color: var(--muted); }
+        .mini-player-controls { display: flex; gap: 8px; align-items: center; }
+        .player-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--podcast); padding: 4px; }
+        .player-close { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--muted); padding: 4px; }
+        /* CHAT */
+        .chat-wrapper { display: flex; flex-direction: column; gap: 16px; }
+        .chat-label { font-size: 10px; color: var(--accent); letter-spacing: 2px; }
+        .chat-messages { min-height: 300px; max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
+        .chat-bubble-user { align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 13px; line-height: 1.6; background: rgba(0,255,136,0.15); border: 1px solid rgba(0,255,136,0.3); color: var(--accent); }
+        .chat-bubble-ai { align-self: flex-start; max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 13px; line-height: 1.6; background: var(--bg2); border: 1px solid var(--border); color: var(--text); }
+        .chat-input-row { display: flex; gap: 8px; }
+        .chat-input {
+          flex: 1; padding: 12px; background: var(--bg2);
+          border: 1px solid var(--border); border-radius: 10px;
+          color: var(--text); font-family: 'Courier New', monospace;
+          font-size: 13px; outline: none;
+        }
+        .chat-input:focus { border-color: var(--accent); }
+        .chat-send {
+          padding: 12px 16px; background: rgba(0,255,136,0.13);
+          border: 1px solid rgba(0,255,136,0.4); border-radius: 10px;
+          color: var(--accent); cursor: pointer; font-size: 16px;
+        }
+        /* QUIZ */
+        .quiz-container { animation: fadeIn 0.3s ease; }
+        .quiz-header { text-align: center; padding: 20px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .quiz-icon { font-size: 40px; margin-bottom: 8px; }
+        .quiz-title { font-size: 20px; font-weight: bold; color: var(--text); margin-bottom: 4px; }
+        .quiz-subtitle { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+        .quiz-progress { display: flex; gap: 6px; margin-bottom: 24px; }
+        .progress-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+        .progress-dot.done { background: var(--accent); }
+        .progress-dot.current { background: var(--accent); opacity: 0.5; }
+        .quiz-question { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .quiz-q-num { font-size: 10px; color: var(--accent); letter-spacing: 2px; margin-bottom: 8px; }
+        .quiz-q-text { font-size: 15px; color: var(--text); line-height: 1.5; font-weight: bold; }
+        .quiz-q-category { font-size: 10px; color: var(--muted); margin-top: 6px; }
+        .quiz-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .quiz-option { padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 13px; color: var(--text); text-align: left; transition: all 0.2s; }
+        .quiz-option:hover { border-color: var(--accent); }
+        .quiz-option.correct { background: rgba(0,255,136,0.15); border-color: var(--accent); color: var(--accent); }
+        .quiz-option.wrong { background: rgba(255,80,80,0.15); border-color: #ff5050; color: #ff5050; }
+        .quiz-option.disabled { pointer-events: none; opacity: 0.5; }
+        .quiz-feedback { padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; display: none; }
+        .quiz-feedback.show { display: block; animation: fadeIn 0.3s ease; }
+        .quiz-feedback.correct { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--accent); }
+        .quiz-feedback.wrong { background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); color: #ff7070; }
+        .quiz-next-btn { width: 100%; padding: 14px; background: rgba(0,255,136,0.13); border: 1px solid rgba(0,255,136,0.4); border-radius: 10px; color: var(--accent); cursor: pointer; font-size: 13px; letter-spacing: 2px; font-family: 'Courier New', monospace; display: none; }
+        .quiz-next-btn.show { display: block; }
+        .quiz-score { text-align: center; padding: 40px 20px; }
+        .score-circle { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--accent); margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; flex-direction: column; box-shadow: 0 0 30px rgba(0,255,136,0.2); }
+        .score-num { font-size: 36px; font-weight: bold; color: var(--accent); }
+        .score-total { font-size: 12px; color: var(--muted); }
+        .score-title { font-size: 18px; font-weight: bold; color: var(--text); margin-bottom: 8px; }
+        .score-msg { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+        .quiz-restart-btn { padding: 14px 32px; background: rgba(0,255,136,0.13); border: 1px solid rgba(0,255,136,0.4); border-radius: 10px; color: var(--accent); cursor: pointer; font-size: 13px; letter-spacing: 2px; font-family: 'Courier New', monospace; }
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-overlay.open { display: flex; }
+        .modal { width: 100%; max-width: 720px; background: var(--bg2); border-radius: 16px 16px 0 0; padding: 28px 24px 100px 24px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.3s ease; border-top: 2px solid var(--accent); }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 16px; align-items: center; }
+        .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; }
+        .lang-section { margin-bottom: 16px; }
+        .lang-title { font-size: 10px; letter-spacing: 2px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .modal-title-en { font-size: 15px; font-weight: bold; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+        .modal-summary-en { font-size: 12px; color: var(--muted); line-height: 1.6; }
+        .modal-title-fr { font-size: 15px; font-weight: bold; color: var(--text); line-height: 1.4; margin-bottom: 6px; }
+        .modal-summary-fr { font-size: 13px; color: var(--text); line-height: 1.7; opacity: 0.8; }
+        .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+        .modal-link { font-size: 11px; color: var(--accent); opacity: 0.7; margin-top: 16px; display: block; }
+        .loading { display: flex; gap: 6px; align-items: center; color: var(--muted); padding: 12px 0; }
+        .loading-dot { animation: pulse 1s infinite; font-size: 16px; }
+        .loading-text { font-size: 12px; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes slideUp { from { transform:translateY(40px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        @keyframes pulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
+        @keyframes shimmer { 0%,100% { opacity:0.4; } 50% { opacity:0.8; } }
+    </style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow"></div>
+
+<div class="container">
+    <div class="header">
+        <div class="header-top">
+            <div class="header-left">
+                <div class="brand">◈ NEWSFILTER POSTS</div>
+                <div class="title">Ton fil d'actu</div>
+            </div>
+            <div class="header-right">
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+                    🌙 <span class="theme-label">NUIT</span>
+                </button>
+                <div class="count-box">
+                    <div class="count-label">ACTIF</div>
+                    <div class="count-num" id="countNum">0</div>
+                    <div class="count-sub">catégories</div>
+                </div>
+
+                <button onclick="refreshFeed()" style="background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:6px 12px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px; color:var(--muted); font-family:'Courier New',monospace;">
+                    🔄 <span style="font-size:10px; letter-spacing:1px;">ACTU</span>
+                </button>
+            </div>
+        </div>
+        <div class="nav">
+            <button class="nav-btn active" onclick="switchView('feed')" id="nav-feed">📰 News</button>
+            <button class="nav-btn" onclick="openRSS()">🇫🇷</button>
+            <button class="nav-btn" onclick="switchView('podcasts')" id="nav-podcasts">🎙️</button>
+            <button class="nav-btn" onclick="switchView('chat')" id="nav-chat">🤖 IA</button>
+            <button class="nav-btn" onclick="switchView('quiz')" id="nav-quiz">🎯 Quiz</button>
+            <button class="nav-btn" onclick="switchView('interests')" id="nav-interests">⚙️</button>
+            <button class="nav-btn" onclick="switchView('about')" id="nav-about">ℹ️</button>
+        </div>
+    </div>
+
+    <!-- VUE INTERESTS -->
+    <div class="view" id="view-interests">
+        <p class="section-label">SÉLECTIONNE TES CENTRES D'INTÉRÊT</p>
+        <div class="cat-grid" id="catGrid"></div>
+        <button class="apply-btn" onclick="switchView('feed')">VOIR MON FIL</button>
+    </div>
+
+    <!-- VUE FEED -->
+    <div class="view" id="view-feed">
+        <div id="feedContent"></div>
+    </div>
+
+    <!-- VUE PODCASTS -->
+    <div class="view" id="view-podcasts">
+        <div class="podcast-header">
+            <span class="podcast-title">◈ PODCASTS EN/FR</span>
+        </div>
+        <div class="podcast-filters" id="podcastFilters"></div>
+        <div id="podcastContent"></div>
+    </div>
+
+    <!-- VUE CHAT -->
+    <div class="view" id="view-chat">
+        <div class="chat-wrapper">
+            <div class="chat-label">◈ ASSISTANT IA — ACTU DU JOUR</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+                <input class="chat-input" id="chatInput" type="text" placeholder="Pose ta question sur l'actu..."/>
+                <button class="chat-send" id="chatSendBtn">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VUE QUIZ -->
+    <div class="view" id="view-quiz">
+        <div id="quizContent"></div>
+    </div>
+
+    <!-- VUE ABOUT -->
+    <div class="view" id="view-about">
+        <div style="padding: 20px 0;">
+            <div style="text-align:center; margin-bottom: 32px;">
+                <div style="font-size:48px; font-weight:bold; color:var(--accent); font-family:'Courier New',monospace;">NFP</div>
+                <div style="font-size:11px; color:var(--muted); letter-spacing:4px; margin-top:4px;">NEWSFILTER POSTS</div>
+            </div>
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:12px;">
+                <div style="font-size:10px; color:var(--accent); letter-spacing:2px; margin-bottom:12px;">◈ À PROPOS</div>
+                <p style="font-size:13px; color:var(--muted); line-height:1.7;">Application mobile d'actualités personnalisées avec traduction automatique, données pollens en temps réel, quiz culture générale, podcasts et assistant IA.</p>
+            </div>
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:12px;">
+                <div style="font-size:10px; color:var(--accent); letter-spacing:2px; margin-bottom:12px;">◈ SOURCES</div>
+                <div style="font-size:12px; color:var(--muted); line-height:2;">
+                    📰 Actualités — NewsData.io<br/>
+                    🌸 Pollens — Open-Meteo<br/>
+                    🎙️ Podcasts — iTunes/Apple<br/>
+                    🇫🇷 Traduction — MyMemory<br/>
+                    🤖 IA — Groq (Llama 3)
+                </div>
+            </div>
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:12px;">
+                <div style="font-size:10px; color:var(--accent); letter-spacing:2px; margin-bottom:12px;">◈ LÉGAL</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="https://pilote33.github.io/nfp-legal/cgu.html" target="_blank"
+                       style="padding:12px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--accent); text-decoration:none; font-size:12px; font-family:'Courier New',monospace;">
+                        📋 Conditions Générales d'Utilisation →
+                    </a>
+                    <a href="https://pilote33.github.io/nfp-legal/privacy.html" target="_blank"
+                       style="padding:12px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--accent); text-decoration:none; font-size:12px; font-family:'Courier New',monospace;">
+                        🔒 Politique de Confidentialité →
+                    </a>
+                </div>
+            </div>
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
+                <div style="font-size:10px; color:var(--accent); letter-spacing:2px; margin-bottom:12px;">◈ CONTACT</div>
+                <a href="mailto:nfp1476@gmail.com" style="font-size:13px; color:var(--muted); text-decoration:none;">✉️ nfp1476@gmail.com</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mini Player -->
+<div class="mini-player" id="miniPlayer">
+    <img class="mini-player-art" id="playerArt" src="" alt=""/>
+    <div class="mini-player-info">
+        <div class="mini-player-name" id="playerName"></div>
+        <div class="mini-player-author" id="playerAuthor"></div>
+    </div>
+    <div class="mini-player-controls">
+        <button class="player-btn" id="playPauseBtn" onclick="togglePlayPause()">⏸️</button>
+        <button class="player-close" onclick="closePlayer()">✕</button>
+    </div>
+</div>
+<audio id="audioPlayer" onended="closePlayer()"></audio>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span class="cat-badge" id="modalBadge"></span>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="lang-section">
+            <div class="lang-title" style="color:var(--muted)">
+                <span class="lang-badge" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border)">EN</span>
+                ORIGINAL
+            </div>
+            <div class="modal-title-en" id="modalTitleEn"></div>
+            <div class="modal-summary-en" id="modalSummaryEn"></div>
+        </div>
+        <hr class="divider"/>
+        <div class="lang-section">
+            <div class="lang-title" style="color:var(--accent)">
+                <span class="lang-badge" style="background:rgba(0,255,136,0.15);color:var(--accent);border:1px solid rgba(0,255,136,0.3)">FR</span>
+                TRADUCTION
+            </div>
+            <div id="frContent">
+                <div class="loading"><span class="loading-dot">◈</span><span class="loading-text">Traduction en cours...</span></div>
+            </div>
+        </div>
+        <a class="modal-link" id="modalLink" target="_blank">Lire l'article complet →</a>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    const NEWSDATA_API_KEY = "pub_3a009025e653449fae6fb81b7efff031";
+    const GROQ_API_KEY = "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";
+
+    // ============================================================
+
+    const CATEGORIES = [
+      { id: "technology",  label: "Tech & IA",    icon: "⚡", color: "#00ff88", ndCategory: "technology" },
+      { id: "science",     label: "Science",       icon: "🔬", color: "#00cfff", ndCategory: "science" },
+      { id: "world",       label: "Géopolitique",  icon: "🌍", color: "#ff6b35", ndCategory: "world" },
+      { id: "french",      label: "🇫🇷 French",     icon: "🇫🇷", color: "#0055A4", ndCategory: "top", ndLang: "fr" },
+      { id: "business",    label: "Économie",      icon: "📈", color: "#ffd700", ndCategory: "business" },
+      { id: "environment", label: "Climat",        icon: "🌿", color: "#7fff00", ndCategory: "environment" },
+      { id: "culture",     label: "Culture",       icon: "🎭", color: "#ff4dff", ndCategory: "entertainment" },
+      { id: "health",      label: "Santé",         icon: "❤️", color: "#ff6b8a", ndCategory: "health" },
+      { id: "sports",      label: "Sport",         icon: "⚽", color: "#ff4444", ndCategory: "sports" },
+      { id: "space",       label: "Espace",        icon: "🚀", color: "#a78bfa", ndCategory: "science" },
+      { id: "pollen",      label: "Pollens",       icon: "🌸", color: "#ffb347", ndCategory: null },
+    ];
+
+    const PODCAST_GENRES = [
+      { id: "all",     label: "Tous",        term: "news",       lang: "" },
+      { id: "tech",    label: "⚡ Tech",     term: "technology", lang: "" },
+      { id: "science", label: "🔬 Science",  term: "science",    lang: "" },
+      { id: "health",  label: "❤️ Santé",    term: "santé",      lang: "fr_fr" },
+      { id: "culture", label: "🎭 Culture",  term: "culture",    lang: "fr_fr" },
+      { id: "actu_fr", label: "🇫🇷 Actu FR", term: "actualité",  lang: "fr_fr" },
+      { id: "actu_en", label: "🇬🇧 News EN", term: "news",       lang: "en_us" },
+    ];
+
+    const ALL_QUESTIONS = [
+      { q: "Quelle est la capitale de l'Australie ?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], answer: 2, category: "🌍 Géographie", explain: "Canberra est la capitale fédérale de l'Australie depuis 1913." },
+      { q: "Qui a peint la Joconde ?", options: ["Michel-Ange", "Raphaël", "Léonard de Vinci", "Botticelli"], answer: 2, category: "🎨 Art", explain: "La Joconde a été peinte par Léonard de Vinci entre 1503 et 1519." },
+      { q: "En quelle année l'homme a-t-il marché sur la Lune ?", options: ["1967", "1969", "1971", "1965"], answer: 1, category: "🚀 Histoire", explain: "Neil Armstrong a marché sur la Lune le 20 juillet 1969." },
+      { q: "Quel est le plus grand océan du monde ?", options: ["Atlantique", "Indien", "Arctique", "Pacifique"], answer: 3, category: "🌍 Géographie", explain: "L'océan Pacifique couvre environ 165 millions de km²." },
+      { q: "Qui a écrit 'Les Misérables' ?", options: ["Émile Zola", "Victor Hugo", "Gustave Flaubert", "Alexandre Dumas"], answer: 1, category: "📚 Littérature", explain: "Victor Hugo a publié Les Misérables en 1862." },
+      { q: "Quelle est la formule chimique de l'eau ?", options: ["CO2", "H2O2", "H2O", "HO"], answer: 2, category: "🔬 Science", explain: "L'eau est composée de deux atomes d'hydrogène et d'un atome d'oxygène." },
+      { q: "Combien de planètes compte notre système solaire ?", options: ["7", "8", "9", "10"], answer: 1, category: "🚀 Astronomie", explain: "Depuis 2006, il y a 8 planètes dans notre système solaire." },
+      { q: "Quel pays a inventé le papier ?", options: ["Égypte", "Inde", "Japon", "Chine"], answer: 3, category: "📚 Histoire", explain: "Le papier a été inventé en Chine vers 105 après J.-C." },
+      { q: "Quelle est la vitesse de la lumière ?", options: ["150 000 km/s", "300 000 km/s", "450 000 km/s", "600 000 km/s"], answer: 1, category: "🔬 Physique", explain: "La vitesse de la lumière est d'environ 300 000 km/s." },
+      { q: "Qui a développé la théorie de la relativité ?", options: ["Isaac Newton", "Niels Bohr", "Albert Einstein", "Max Planck"], answer: 2, category: "🔬 Science", explain: "Albert Einstein a publié sa théorie de la relativité en 1905 et 1915." },
+      { q: "Quel est le plus long fleuve du monde ?", options: ["Amazone", "Nil", "Mississippi", "Yangtsé"], answer: 1, category: "🌍 Géographie", explain: "Le Nil, avec ses 6 650 km, est le plus long fleuve du monde." },
+      { q: "En quelle année a débuté la Première Guerre mondiale ?", options: ["1912", "1914", "1916", "1918"], answer: 1, category: "📚 Histoire", explain: "La Première Guerre mondiale a commencé le 28 juillet 1914." },
+      { q: "Quel est le symbole chimique de l'or ?", options: ["Or", "Go", "Au", "Ag"], answer: 2, category: "🔬 Chimie", explain: "Au vient du latin 'Aurum' qui signifie or." },
+      { q: "Quelle est la monnaie du Japon ?", options: ["Won", "Yuan", "Yen", "Ringgit"], answer: 2, category: "💰 Économie", explain: "Le yen japonais est la monnaie officielle du Japon depuis 1871." },
+      { q: "Quel organe produit l'insuline ?", options: ["Foie", "Reins", "Pancréas", "Rate"], answer: 2, category: "❤️ Santé", explain: "L'insuline est produite par le pancréas." },
+      { q: "Quand a été fondée Apple ?", options: ["1972", "1976", "1980", "1984"], answer: 1, category: "⚡ Tech", explain: "Apple a été fondée le 1er avril 1976." },
+      { q: "Que signifie 'IA' ?", options: ["Information Artificielle", "Intelligence Artificielle", "Interface Automatique", "Intégration Avancée"], answer: 1, category: "⚡ Tech", explain: "IA signifie Intelligence Artificielle." },
+      { q: "Quel langage a été créé par Guido van Rossum ?", options: ["Java", "Ruby", "Python", "Go"], answer: 2, category: "⚡ Tech", explain: "Python a été créé par Guido van Rossum en 1991." },
+      { q: "Que signifie 'HTML' ?", options: ["HyperText Markup Language", "High Text Modern Language", "HyperText Modern Link", "Home Tool Markup Language"], answer: 0, category: "⚡ Tech", explain: "HTML signifie HyperText Markup Language." },
+      { q: "Quel réseau social a été fondé par Mark Zuckerberg ?", options: ["Twitter", "Instagram", "Facebook", "LinkedIn"], answer: 2, category: "⚡ Tech", explain: "Facebook a été fondé par Mark Zuckerberg en 2004." },
+      { q: "Quel gaz est responsable de l'effet de serre ?", options: ["Oxygène", "Azote", "CO2", "Hydrogène"], answer: 2, category: "🌿 Environnement", explain: "Le CO2 est le principal gaz à effet de serre d'origine humaine." },
+      { q: "Quel accord vise à limiter le réchauffement climatique ?", options: ["Accord de Kyoto", "Accord de Paris", "Traité de Genève", "Protocole de Montréal"], answer: 1, category: "🌿 Climat", explain: "L'Accord de Paris, signé en 2015, vise à limiter le réchauffement à 1,5°C." },
+      { q: "Quelle énergie est produite par les panneaux solaires ?", options: ["Éolienne", "Hydroélectrique", "Photovoltaïque", "Géothermique"], answer: 2, category: "🌿 Énergie", explain: "Les panneaux solaires produisent de l'énergie photovoltaïque." },
+    ];
+
+    let selected = new Set(["technology", "science", "health"]);
+    let newsCache = {};
+    let isDark = true;
+    let lastLat = 43.2965;
+    let lastLon = 5.3698;
+    let quizQuestions = [];
+    let currentQ = 0;
+    let score = 0;
+    let answered = false;
+    let currentPodcastGenre = "all";
+    let podcastCache = {};
+    let isPlaying = false;
+    let chatHistory = [];
+    let newsContext = "";
+    let chatInitialized = false;
+
+    function getCat(id) { return CATEGORIES.find(c => c.id === id) || {}; }
+
+    function openRSS() {
+  window.location.href = "rss.html";
+}
+
+    function toggleTheme() {
+      isDark = !isDark;
+      document.body.classList.toggle("light", !isDark);
+      const btn = document.getElementById("themeBtn");
+      btn.innerHTML = isDark ? '🌙 <span class="theme-label">NUIT</span>' : '☀️ <span class="theme-label">JOUR</span>';
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      const now = new Date();
+      const diff = Math.floor((now - d) / 60000);
+      if (diff < 60) return `Il y a ${diff}min`;
+      if (diff < 1440) return `Il y a ${Math.floor(diff/60)}h`;
+      return `Il y a ${Math.floor(diff/1440)}j`;
+    }
+
+    async function translate(text) {
+      if (!text) return "";
+      try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0,500))}&langpair=en|fr`);
+        const data = await res.json();
+        return data.responseData?.translatedText || text;
+      } catch(e) { return text; }
+    }
+
+    async function getCoords() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) { resolve({ lat: lastLat, lon: lastLon }); return; }
+        navigator.geolocation.getCurrentPosition(
+          pos => { lastLat = pos.coords.latitude; lastLon = pos.coords.longitude; resolve({ lat: lastLat, lon: lastLon }); },
+          () => resolve({ lat: lastLat, lon: lastLon })
+        );
+      });
+    }
+
+    async function getCityName(lat, lon) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        const data = await res.json();
+        return data.address?.city || data.address?.town || data.address?.village || "ta position";
+      } catch(e) { return "ta position"; }
+    }
+
+    async function fetchNews(category) {
+      if (newsCache[category.id]) return newsCache[category.id];
+      if (category.id === "pollen") {
+        try {
+          const coords = await getCoords();
+          const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen&timezone=auto&forecast_days=1`);
+          const data = await res.json();
+          const hourly = data.hourly;
+          const now = new Date().getHours();
+          const articles = [
+            { id:"p1", category:"pollen", title:"Graminées",  summary:`Indice actuel : ${hourly.grass_pollen?.[now] ?? 'N/A'} grains/m³`, time:"Maintenant", url:"", lat: coords.lat, lon: coords.lon },
+            { id:"p2", category:"pollen", title:"Bouleau",    summary:`Indice actuel : ${hourly.birch_pollen?.[now] ?? 'N/A'} grains/m³`, time:"Maintenant", url:"", lat: coords.lat, lon: coords.lon },
+            { id:"p3", category:"pollen", title:"Olivier",    summary:`Indice actuel : ${hourly.olive_pollen?.[now] ?? 'N/A'} grains/m³`, time:"Maintenant", url:"", lat: coords.lat, lon: coords.lon },
+            { id:"p4", category:"pollen", title:"Armoise",    summary:`Indice actuel : ${hourly.mugwort_pollen?.[now] ?? 'N/A'} grains/m³`, time:"Maintenant", url:"", lat: coords.lat, lon: coords.lon },
+            { id:"p5", category:"pollen", title:"Aulne",      summary:`Indice actuel : ${hourly.alder_pollen?.[now] ?? 'N/A'} grains/m³`, time:"Maintenant", url:"", lat: coords.lat, lon: coords.lon },
+          ];
+          newsCache[category.id] = articles;
+          return articles;
+        } catch(e) { return []; }
+      }
+      try {
+        const lang = category.ndLang || "fr,en";
+        const res = await fetch(`https://newsdata.io/api/1/news?apikey=${NEWSDATA_API_KEY}&category=${category.ndCategory}&country=au,ca,cn,fr,us&language=fr,en&removeduplicate=1&size=5`);
+        const data = await res.json();
+        const articles = (data.results || []).map(a => ({
+          id: a.article_id, category: category.id,
+          title: a.title || "",
+          summary: (a.description || a.content || "").substring(0, 200),
+          time: formatDate(a.pubDate), url: a.link || ""
+        }));
+        newsCache[category.id] = articles;
+        return articles;
+      } catch(e) { return []; }
+    }
+
+    // ===== CHAT =====
+    async function buildNewsContext() {
+      try {
+        const res = await fetch(`https://newsdata.io/api/1/news?apikey=${NEWSDATA_API_KEY}&country=au,ca,cn,fr,us&language=fr,en&size=5`);
+        const data = await res.json();
+         // Date exacte du jour
+        const today = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateStr = today.toLocaleDateString('fr-FR', options);
+        newsContext = `Date du jour : ${dateStr}\n\n` + (data.results || []).map(a =>
+          `- ${a.title}: ${(a.description || '').substring(0, 100)}`
+        ).join("\n");
+      } catch(e) { newsContext = ""; }
+    }
+
+    function addChatMessage(role, text) {
+      const container = document.getElementById("chatMessages");
+      if (!container) return;
+      const div = document.createElement("div");
+      div.className = role === "user" ? "chat-bubble-user" : "chat-bubble-ai";
+      div.textContent = text;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendChat() {
+  const input = document.getElementById("chatInput");
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+
+  addChatMessage("user", message);
+  chatHistory.push({ role: "user", content: message });
+
+  const loadingDiv = document.createElement("div");
+  loadingDiv.className = "chat-bubble-ai";
+  loadingDiv.id = "chatLoading";
+  loadingDiv.textContent = "◈ Réflexion en cours...";
+  document.getElementById("chatMessages").appendChild(loadingDiv);
+  document.getElementById("chatMessages").scrollTop = document.getElementById("chatMessages").scrollHeight;
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `Tu es un assistant journaliste expert. Tu réponds en français de façon claire et concise. Actualités du jour :\n${newsContext}`
+          },
+          ...chatHistory
+        ],
+        max_tokens: 500,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    document.getElementById("chatLoading")?.remove();
+    const reply = data.choices?.[0]?.message?.content || "Désolé, je n'ai pas pu répondre.";
+    addChatMessage("assistant", reply);
+    chatHistory.push({ role: "assistant", content: reply });
+  } catch(e) {
+    document.getElementById("chatLoading")?.remove();
+    addChatMessage("assistant", "Erreur de connexion. Vérifie ta connexion internet.");
+  }
+}
+
+// Callback appelé par Android
+function receiveGroqResponse(callbackId, text) {
+  // Supprime le message de chargement si présent
+  const container = document.getElementById("chatMessages");
+  const lastMsg = container.lastChild;
+  if (lastMsg && lastMsg.textContent.includes("⏳")) {
+    container.removeChild(lastMsg);
+  }
+
+  document.getElementById("chatLoading")?.remove();
+  const reply = text.replace(/\\n/g, '\n');
+  addChatMessage("assistant", reply);
+
+  // N'ajoute à l'historique que si c'est une vraie réponse (pas le résumé de bienvenue)
+  if (!callbackId.startsWith("welcome_")) {
+    chatHistory.push({ role: "assistant", content: reply });
+  }
+}
+
+    // ===== PODCASTS =====
+    async function fetchPodcasts(genre) {
+      if (podcastCache[genre.id]) return podcastCache[genre.id];
+      try {
+        const langParam = genre.lang ? `&lang=${genre.lang}` : '';
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(genre.term)}&media=podcast&entity=podcast&limit=10${langParam}`);
+        const data = await res.json();
+        const podcasts = (data.results || []).map(p => ({
+          id: p.collectionId, name: p.collectionName, author: p.artistName,
+          art: p.artworkUrl100 || p.artworkUrl60,
+          genre: p.primaryGenreName || "",
+          feedUrl: p.feedUrl || "", itunesUrl: p.collectionViewUrl || "",
+        }));
+        podcastCache[genre.id] = podcasts;
+        return podcasts;
+      } catch(e) { return []; }
+    }
+
+    function buildPodcastFilters() {
+      document.getElementById("podcastFilters").innerHTML = PODCAST_GENRES.map(g =>
+        `<button class="podcast-filter ${g.id === currentPodcastGenre ? 'active' : ''}" onclick="selectPodcastGenre('${g.id}')">${g.label}</button>`
+      ).join("");
+    }
+
+    async function selectPodcastGenre(id) {
+      currentPodcastGenre = id;
+      buildPodcastFilters();
+      await buildPodcasts();
+    }
+
+    async function buildPodcasts() {
+      const container = document.getElementById("podcastContent");
+      container.innerHTML = `<div class="loading-feed">${Array(3).fill(0).map(() => `<div class="skeleton"><div class="skel-line" style="width:30%"></div><div class="skel-line" style="width:90%"></div><div class="skel-line" style="width:60%"></div></div>`).join("")}</div>`;
+      const genre = PODCAST_GENRES.find(g => g.id === currentPodcastGenre) || PODCAST_GENRES[0];
+      const podcasts = await fetchPodcasts(genre);
+      if (podcasts.length === 0) { container.innerHTML = `<div class="empty"><div class="empty-icon">🎙️</div><p>Aucun podcast trouvé.</p></div>`; return; }
+      container.innerHTML = podcasts.map((p, i) => `
+        <div class="podcast-card" style="animation-delay:${i*0.05}s">
+          <img class="podcast-art" src="${p.art}" alt="${p.name}" onerror="this.style.display='none'"/>
+          <div class="podcast-info">
+            <div class="podcast-name">${p.name}</div>
+            <div class="podcast-author">${p.author}</div>
+            <span class="podcast-genre">${p.genre}</span>
+            <div class="podcast-actions">
+              ${p.feedUrl ? `<button class="podcast-btn primary" onclick="playPodcast('${encodeURIComponent(p.feedUrl)}','${encodeURIComponent(p.name)}','${encodeURIComponent(p.author)}','${p.art}')">▶ Écouter</button>` : ''}
+              ${p.itunesUrl ? `<button class="podcast-btn" onclick="window.open('${p.itunesUrl}','_blank')">↗ iTunes</button>` : ''}
+            </div>
+          </div>
+        </div>`).join("");
+    }
+
+    async function playPodcast(feedUrlEncoded, nameEncoded, authorEncoded, art) {
+      const feedUrl = decodeURIComponent(feedUrlEncoded);
+      const name = decodeURIComponent(nameEncoded);
+      const author = decodeURIComponent(authorEncoded);
+      try {
+        const res = await fetch(feedUrl);
+        const text = await res.text();
+        if (!text.includes('<rss') && !text.includes('<feed')) throw new Error("Pas RSS");
+        const xml = new DOMParser().parseFromString(text, "text/xml");
+        let audioUrl = "";
+        for (const item of xml.querySelectorAll("item")) {
+          const enc = item.querySelector("enclosure");
+          if (enc && enc.getAttribute("type")?.includes("audio")) { audioUrl = enc.getAttribute("url"); break; }
+        }
+        if (!audioUrl) throw new Error("Pas audio");
+        const audio = document.getElementById("audioPlayer");
+        audio.src = audioUrl; audio.play(); isPlaying = true;
+        document.getElementById("playerName").textContent = name;
+        document.getElementById("playerAuthor").textContent = author;
+        document.getElementById("playerArt").src = art;
+        document.getElementById("playPauseBtn").textContent = "⏸️";
+        document.getElementById("miniPlayer").classList.add("show");
+      } catch(e) {
+        const allPodcasts = Object.values(podcastCache).flat();
+        const podcast = allPodcasts.find(p => p.feedUrl === feedUrl);
+        window.open(podcast?.itunesUrl || `https://podcasts.apple.com/search?term=${encodeURIComponent(name)}`, "_blank");
+      }
+    }
+
+    function togglePlayPause() {
+      const audio = document.getElementById("audioPlayer");
+      if (isPlaying) { audio.pause(); isPlaying = false; document.getElementById("playPauseBtn").textContent = "▶️"; }
+      else { audio.play(); isPlaying = true; document.getElementById("playPauseBtn").textContent = "⏸️"; }
+    }
+
+    function closePlayer() {
+      const audio = document.getElementById("audioPlayer");
+      audio.pause(); audio.src = ""; isPlaying = false;
+      document.getElementById("miniPlayer").classList.remove("show");
+    }
+
+    // ===== FEED =====
+    function buildCatGrid() {
+      document.getElementById("catGrid").innerHTML = CATEGORIES.map(cat => {
+        const on = selected.has(cat.id);
+        return `<button class="cat-btn${on ? ' on' : ''}" onclick="toggleCat('${cat.id}')"
+          style="border-color:${on ? cat.color+'66' : 'var(--border)'};background:${on ? cat.color+'11' : 'var(--bg3)'};">
+          <div class="cat-dot" style="background:${cat.color};box-shadow:0 0 8px ${cat.color}"></div>
+          <div class="cat-icon">${cat.icon}</div>
+          <div class="cat-name" style="color:${on ? cat.color : 'var(--muted)'}">${cat.label}</div>
+        </button>`;
+      }).join("");
+      document.getElementById("countNum").textContent = selected.size;
+    }
+
+    function toggleCat(id) {
+      selected.has(id) ? selected.delete(id) : selected.add(id);
+      delete newsCache[id]; buildCatGrid();
+    }
+
+    async function buildFeed() {
+      const container = document.getElementById("feedContent");
+      if (selected.size === 0) { container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><p>Aucune catégorie sélectionnée.</p><button class="empty-link" onclick="switchView('interests')">Configurer mes intérêts</button></div>`; return; }
+      container.innerHTML = `<div class="loading-feed">${Array(4).fill(0).map(() => `<div class="skeleton"><div class="skel-line" style="width:30%"></div><div class="skel-line" style="width:90%"></div><div class="skel-line" style="width:60%"></div></div>`).join("")}</div>`;
+      const results = await Promise.all([...selected].map(id => fetchNews(getCat(id))));
+      const allNews = results.flat();
+      if (allNews.length === 0) { container.innerHTML = `<div class="empty"><div class="empty-icon">◈</div><p>Aucun article trouvé.</p></div>`; return; }
+      container.innerHTML = `<div class="feed">${allNews.map((news, i) => {
+        const cat = getCat(news.category);
+        const safeNews = encodeURIComponent(JSON.stringify(news));
+        return `<div class="news-card" onclick="openNews('${safeNews}')" style="border-left-color:${cat.color};animation-delay:${i*0.05}s">
+          <div class="card-meta">
+            <span class="cat-badge" style="background:${cat.color}18;color:${cat.color};border:1px solid ${cat.color}33">${cat.icon} ${cat.label}</span>
+            ${cat.id !== 'pollen' ? `<span class="lang-badge" style="background:var(--bg3);color:var(--muted);border:1px solid var(--border)">EN</span>` : ''}
+            <span class="card-time">${news.time}</span>
+          </div>
+          <div class="card-title">${news.title}</div>
+          <div class="card-summary">${news.summary.substring(0,120)}${news.summary.length>120?'...':''}</div>
+          <div class="card-cta" style="color:${cat.color}">${cat.id==='pollen'?'◈ Voir détails →':'◈ Voir traduction FR →'}</div>
+        </div>`;
+      }).join("")}</div>`;
+    }
+
+    async function openNews(encoded) {
+      const news = JSON.parse(decodeURIComponent(encoded));
+      const cat = getCat(news.category);
+      document.getElementById("modalBadge").textContent = `${cat.icon} ${cat.label}`;
+      document.getElementById("modalBadge").style.cssText = `background:${cat.color}18;color:${cat.color};border:1px solid ${cat.color}33;font-size:10px;padding:3px 10px;border-radius:20px;font-family:'Courier New',monospace`;
+      document.getElementById("modalTitleEn").textContent = news.title;
+      document.getElementById("modalSummaryEn").textContent = news.summary;
+      document.getElementById("modalLink").href = news.url;
+      document.getElementById("modalLink").style.display = news.url ? "block" : "none";
+      document.querySelector(".modal").style.borderTopColor = cat.color;
+      document.getElementById("frContent").innerHTML = `<div class="loading"><span class="loading-dot">◈</span><span class="loading-text">Chargement...</span></div>`;
+      document.getElementById("modalOverlay").classList.add("open");
+      if (news.category === "pollen") {
+        const cityName = await getCityName(news.lat || lastLat, news.lon || lastLon);
+        document.getElementById("frContent").innerHTML = `<div class="modal-title-fr">${news.title}</div><div class="modal-summary-fr">${news.summary}<br><br><span style="color:#ffb347;font-size:11px">📍 Données pour ${cityName} — Open-Meteo</span></div>`;
+        return;
+      }
+      const [titleFr, summaryFr] = await Promise.all([translate(news.title), translate(news.summary)]);
+      document.getElementById("frContent").innerHTML = `<div class="modal-title-fr">${titleFr}</div><div class="modal-summary-fr">${summaryFr}</div>`;
+    }
+
+    function closeModal() { document.getElementById("modalOverlay").classList.remove("open"); }
+
+    // ===== QUIZ =====
+    function startQuiz() {
+      quizQuestions = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 5);
+      currentQ = 0; score = 0; renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q = quizQuestions[currentQ]; answered = false;
+      const progress = Array(5).fill(0).map((_, i) => `<div class="progress-dot ${i < currentQ ? 'done' : i === currentQ ? 'current' : ''}"></div>`).join("");
+      document.getElementById("quizContent").innerHTML = `
+        <div class="quiz-container">
+          <div class="quiz-header"><div class="quiz-icon">🎯</div><div class="quiz-title">Quiz Culture & Actu</div><div class="quiz-subtitle">QUESTION ${currentQ + 1} / 5</div></div>
+          <div class="quiz-progress">${progress}</div>
+          <div class="quiz-question"><div class="quiz-q-num">◈ QUESTION ${currentQ + 1}</div><div class="quiz-q-text">${q.q}</div><div class="quiz-q-category">${q.category}</div></div>
+          <div class="quiz-options">${q.options.map((opt, i) => `<button class="quiz-option" onclick="answerQuestion(${i})" id="opt-${i}">${['A','B','C','D'][i]}. ${opt}</button>`).join("")}</div>
+          <div class="quiz-feedback" id="quizFeedback"></div>
+          <button class="quiz-next-btn" id="quizNextBtn" onclick="nextQuestion()">${currentQ < 4 ? 'QUESTION SUIVANTE →' : 'VOIR MON SCORE →'}</button>
+        </div>`;
+    }
+
+    function answerQuestion(index) {
+      if (answered) return; answered = true;
+      const q = quizQuestions[currentQ]; const isCorrect = index === q.answer;
+      if (isCorrect) score++;
+      document.querySelectorAll('.quiz-option').forEach((btn, i) => { btn.classList.add('disabled'); if (i === q.answer) btn.classList.add('correct'); else if (i === index && !isCorrect) btn.classList.add('wrong'); });
+      const fb = document.getElementById("quizFeedback");
+      fb.className = `quiz-feedback show ${isCorrect ? 'correct' : 'wrong'}`;
+      fb.innerHTML = isCorrect ? `✅ Bonne réponse ! ${q.explain}` : `❌ Mauvaise réponse. La bonne réponse était : <strong>${q.options[q.answer]}</strong>. ${q.explain}`;
+      document.getElementById("quizNextBtn").classList.add("show");
+    }
+
+    function nextQuestion() { currentQ++; if (currentQ >= 5) showScore(); else renderQuestion(); }
+
+    function showScore() {
+      const msgs = [{min:0,max:1,msg:"Pas de chance ! Réessaie. 💪",emoji:"😅"},{min:2,max:2,msg:"Pas mal ! Tu peux faire mieux. 📚",emoji:"🙂"},{min:3,max:3,msg:"Bien joué ! 👍",emoji:"😊"},{min:4,max:4,msg:"Excellent ! Presque parfait. 🌟",emoji:"😄"},{min:5,max:5,msg:"Parfait ! Tu es incollable ! 🏆",emoji:"🎉"}];
+      const result = msgs.find(m => score >= m.min && score <= m.max);
+      document.getElementById("quizContent").innerHTML = `
+        <div class="quiz-score">
+          <div class="quiz-header"><div class="quiz-icon">${result.emoji}</div><div class="quiz-title">Résultat</div></div>
+          <div class="score-circle"><div class="score-num">${score}</div><div class="score-total">/ 5</div></div>
+          <div class="score-title">${score >= 4 ? 'Félicitations !' : score >= 3 ? 'Bien joué !' : 'Continue !'}</div>
+          <div class="score-msg">${result.msg}</div>
+          <button class="quiz-restart-btn" onclick="startQuiz()">🔄 REJOUER</button>
+        </div>`;
+    }
+
+    function refreshFeed() {
+        newsCache = {};
+        buildFeed();
+}
+
+async function generateWelcomeSummary() {
+  const selectedCats = [...selected].map(id => getCat(id).label).join(", ");
+  addChatMessage("assistant", "⏳ Je prépare ton résumé personnalisé...");
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `Tu es un assistant journaliste expert. Tu réponds en français. Actualités du jour :\n${newsContext}`
+          },
+          {
+            role: "user",
+            content: `Génère un résumé chaleureux des actualités du jour pour quelqu'un qui s'intéresse à : ${selectedCats}. Commence par "Bonjour ! 👋" puis donne 2-3 points clés. Termine par "N'hésitez pas à me poser vos questions !". Maximum 4-5 phrases.`
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7
+      })
+    });
+    const data = await res.json();
+    const container = document.getElementById("chatMessages");
+    if (container.lastChild) container.removeChild(container.lastChild);
+    const reply = data.choices?.[0]?.message?.content;
+    if (reply) {
+      addChatMessage("assistant", reply);
+    } else {
+      addChatMessage("assistant", `Bonjour ! 👋 Tu suis : ${selectedCats}. Pose-moi toutes tes questions !`);
+    }
+  } catch(e) {
+    const container = document.getElementById("chatMessages");
+    if (container.lastChild) container.removeChild(container.lastChild);
+    addChatMessage("assistant", `Bonjour ! 👋 Tu suis : ${selectedCats}. Pose-moi toutes tes questions !`);
+  }
+}
+
+    // ===== NAVIGATION =====
+    function switchView(v) {
+      ['feed', 'interests', 'quiz', 'podcasts', 'about', 'chat'].forEach(view => {
+        const el = document.getElementById(`view-${view}`);
+        if (el) el.style.display = v === view ? "block" : "none";
+        const btn = document.getElementById(`nav-${view}`);
+        if (btn) btn.classList.toggle("active", v === view);
+      });
+      if (v === "feed") buildFeed();
+      if (v === "interests") buildCatGrid();
+      if (v === "quiz") startQuiz();
+      if (v === "podcasts") { buildPodcastFilters(); buildPodcasts(); }
+      if (v === "chat") {
+        buildNewsContext();
+        if (v === "chat") {
+    buildNewsContext().then(() => {
+      if (!chatInitialized) {
+        chatInitialized = true;
+        generateWelcomeSummary();
+      }
+    });
+  }
+      }
+    }
+
+    // Init bouton send
+    document.getElementById("chatSendBtn").addEventListener("click", sendChat);
+    document.getElementById("chatInput").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") sendChat();
+    });
+
+    switchView('feed');
+    buildCatGrid();
+</script>
+</body>
+</html>

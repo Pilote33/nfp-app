@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>NFP — Actus Françaises</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #0d0d16;
+    --bg3: #111118;
+    --border: #1e1e2e;
+    --text: #e0e0e0;
+    --muted: #555;
+    --accent: #00ff88;
+    --card-hover: #111120;
+  }
+  .light {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --bg3: #e8edf2;
+    --border: #d0d8e4;
+    --text: #1a1a2e;
+    --muted: #888;
+    --accent: #00aa55;
+    --card-hover: #f8fafc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    font-family: 'Courier New', monospace;
+    color: var(--text);
+    overflow-x: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 720px; margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .back-btn {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    color: var(--accent); cursor: pointer; font-size: 12px;
+    font-family: 'Courier New', monospace; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { border-color: var(--accent); }
+  .brand { font-size: 11px; color: var(--accent); letter-spacing: 4px; }
+  .title { font-size: 20px; font-weight: bold; color: var(--text); margin-top: 2px; }
+  .theme-toggle {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 12px;
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .theme-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  /* Source filters */
+  .source-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .source-btn {
+    padding: 5px 12px; border-radius: 20px; font-size: 10px;
+    border: 1px solid var(--border); background: var(--bg3);
+    color: var(--muted); cursor: pointer;
+    font-family: 'Courier New', monospace; transition: all 0.2s;
+  }
+  .source-btn.active {
+    background: rgba(0,255,136,0.15);
+    border-color: var(--accent); color: var(--accent);
+  }
+  /* Articles */
+  .feed { display: flex; flex-direction: column; gap: 10px; }
+  .article-card {
+    padding: 16px; background: var(--bg2);
+    border: 1px solid var(--border); border-left-width: 3px;
+    border-radius: 10px; cursor: pointer;
+    transition: background 0.2s; animation: fadeIn 0.3s ease both;
+    text-decoration: none; display: block; color: var(--text);
+  }
+  .article-card:hover { background: var(--card-hover); }
+  .card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .source-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-family: 'Courier New', monospace;
+  }
+  .card-time { font-size: 10px; color: var(--muted); margin-left: auto; }
+  .card-title { font-size: 14px; font-weight: bold; color: var(--text); line-height: 1.4; margin-bottom: 4px; }
+  .card-summary { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .card-cta { margin-top: 8px; font-size: 10px; opacity: 0.7; }
+  /* Loading */
+  .loading-feed { display: flex; flex-direction: column; gap: 10px; }
+  .skeleton { padding: 16px; background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 10px; }
+  .skel-line { height: 10px; background: var(--bg3); border-radius: 4px; margin-bottom: 8px; animation: shimmer 1.5s infinite; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .refresh-btn {
+    margin-bottom: 16px; padding: 10px 20px;
+    background: rgba(0,255,136,0.13); border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 10px; color: var(--accent); cursor: pointer;
+    font-size: 12px; letter-spacing: 2px; font-family: 'Courier New', monospace;
+    width: 100%;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes shimmer { 0%,100% { opacity:0.4; } 50% { opacity:0.8; } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <a href="newsfilter.html" class="back-btn">← Retour</a>
+      <div>
+        <div class="brand">◈ ACTUS FR</div>
+        <div class="title">Presse Française</div>
+      </div>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+      🌙 <span class="theme-label">NUIT</span>
+    </button>
+  </div>
+
+  <button class="refresh-btn" onclick="loadAllFeeds()">🔄 ACTUALISER</button>
+
+  <div class="source-filters" id="sourceFilters"></div>
+  <div id="feedContent"></div>
+</div>
+
+<script>
+const RSS_SOURCES = [
+  {
+    id: "lemonde",
+    name: "Le Monde",
+    icon: "🗞️",
+    color: "#0066cc",
+    url: "https://www.lemonde.fr/rss/une.xml"
+  },
+  {
+    id: "franceinfo",
+    name: "FranceInfo",
+    icon: "📻",
+    color: "#e63946",
+    url: "https://www.francetvinfo.fr/titres.rss"
+  },
+  {
+    id: "20minutes",
+    name: "20 Minutes",
+    icon: "⏱️",
+    color: "#f4a261",
+    url: "https://www.20minutes.fr/feeds/rss/une.xml"
+  },
+  {
+    id: "liberation",
+    name: "Libération",
+    icon: "✊",
+    color: "#e76f51",
+    url: "https://www.liberation.fr/arc/outboundfeeds/rss/"
+  },
+  {
+    id: "lequipe",
+    name: "L'Équipe",
+    icon: "🏆",
+    color: "#ffd700",
+    url: "https://www.lequipe.fr/rss/actu_rss.xml"
+  },
+  {
+    id: "eurosport",
+    name: "Eurosport",
+    icon: "⚽",
+    color: "#ff4444",
+    url: "https://www.eurosport.fr/rss.xml"
+  }
+
+];
+
+const RSS2JSON_API = "https://api.allorigins.win/get?url=";
+
+let isDark = true;
+let activeSource = "all";
+let allArticles = [];
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.body.classList.toggle("light", !isDark);
+  const btn = document.getElementById("themeBtn");
+  btn.innerHTML = isDark ? '🌙 <span class="theme-label">NUIT</span>' : '☀️ <span class="theme-label">JOUR</span>';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 60000);
+  if (diff < 60) return `Il y a ${diff}min`;
+  if (diff < 1440) return `Il y a ${Math.floor(diff/60)}h`;
+  return `Il y a ${Math.floor(diff/1440)}j`;
+}
+
+function buildFilters() {
+  const container = document.getElementById("sourceFilters");
+  const sources = [{id:"all", name:"Toutes", icon:"📰", color: "#00ff88"}, ...RSS_SOURCES];
+  container.innerHTML = sources.map(s =>
+    `<button class="source-btn ${s.id === activeSource ? 'active' : ''}"
+      onclick="filterSource('${s.id}')"
+      style="${s.id === activeSource ? `background:${s.color}18;border-color:${s.color};color:${s.color}` : ''}">
+      ${s.icon} ${s.name}
+    </button>`
+  ).join("");
+}
+
+function filterSource(id) {
+  activeSource = id;
+  buildFilters();
+  renderArticles();
+}
+
+async function fetchRSS(source) {
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(source.url)}`);
+    const data = await res.json();
+    if (!data.contents) return [];
+
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(data.contents, "text/xml");
+
+    // Essai avec "item" puis "entry" pour les flux Atom
+    let items = Array.from(xml.querySelectorAll("item"));
+    if (items.length === 0) items = Array.from(xml.querySelectorAll("entry"));
+
+    return items.slice(0, 8).map(item => {
+      const title = item.querySelector("title")?.textContent?.trim() || "";
+      const desc = item.querySelector("description")?.textContent ||
+                   item.querySelector("summary")?.textContent || "";
+      const link = item.querySelector("link")?.textContent?.trim() ||
+                   item.querySelector("link")?.getAttribute("href") || "";
+      const pubDate = item.querySelector("pubDate")?.textContent ||
+                      item.querySelector("published")?.textContent || "";
+
+      return {
+        id: link,
+        source: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+        sourceIcon: source.icon,
+        title: title,
+        summary: desc.replace(/<[^>]*>/g, "").substring(0, 150),
+        time: formatDate(pubDate),
+        url: link
+      };
+    }).filter(a => a.title && a.url);
+  } catch(e) {
+    console.log("Erreur RSS:", source.name, e.message);
+    return [];
+  }
+}
+
+async function loadAllFeeds() {
+  const container = document.getElementById("feedContent");
+  container.innerHTML = `<div class="loading-feed">${Array(5).fill(0).map(() =>
+    `<div class="skeleton">
+      <div class="skel-line" style="width:30%"></div>
+      <div class="skel-line" style="width:90%"></div>
+      <div class="skel-line" style="width:60%"></div>
+    </div>`).join("")}</div>`;
+
+  const results = await Promise.all(RSS_SOURCES.map(s => fetchRSS(s)));
+  allArticles = results.flat().sort((a, b) => {
+    if (a.time < b.time) return 1;
+    if (a.time > b.time) return -1;
+    return 0;
+  });
+
+console.log("Résultats RSS:", results);
+console.log("Total articles:", results.flat().length);
+
+  renderArticles();
+}
+
+function renderArticles() {
+  const container = document.getElementById("feedContent");
+  const filtered = activeSource === "all"
+    ? allArticles
+    : allArticles.filter(a => a.source === activeSource);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty"><p>Aucun article trouvé.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="feed">${filtered.map((article, i) => `
+    <a class="article-card" href="${article.url}" target="_blank"
+      style="border-left-color:${article.sourceColor};animation-delay:${i*0.04}s">
+      <div class="card-meta">
+        <span class="source-badge"
+          style="background:${article.sourceColor}18;color:${article.sourceColor};border:1px solid ${article.sourceColor}33">
+          ${article.sourceIcon} ${article.sourceName}
+        </span>
+        <span class="card-time">${article.time}</span>
+      </div>
+      <div class="card-title">${article.title}</div>
+      <div class="card-summary">${article.summary}${article.summary.length >= 150 ? '...' : ''}</div>
+      <div class="card-cta" style="color:${article.sourceColor}">Lire l'article →</div>
+    </a>`).join("")}</div>`;
+}
+
+// Init
+buildFilters();
+loadAllFeeds();
+</script>
+</body>
+</html>
